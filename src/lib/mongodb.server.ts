@@ -6,6 +6,10 @@ import process from "node:process";
 // chega ao navegador. O MongoDB NÃO pode ser acessado do browser; use este
 // cliente apenas dentro de server functions (createServerFn) ou .server.ts.
 
+
+const MONGODB_URI="mongodb+srv://rodrigoperlin1_db_user:drake951357@cluster1.vfwfcw6.mongodb.net/?retryWrites=true&w=majority&appName=Cluster1"
+const MONGODB_DB="financeiro_socios"
+
 const DB_NAME = process.env.MONGODB_DB || "financeiro_socios";
 
 declare global {
