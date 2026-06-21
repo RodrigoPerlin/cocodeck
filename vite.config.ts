@@ -16,13 +16,47 @@ export default defineConfig(async ({ command }) => {
   // sobreponha com a variável de ambiente NITRO_PRESET se precisar (ex: node-server).
   if (command === "build") {
     const { nitro } = await import("nitro/vite");
-    plugins.push(nitro({ preset: process.env.NITRO_PRESET || "vercel" }));
+    plugins.push(
+      nitro({
+        preset: process.env.NITRO_PRESET || "vercel",
+        rollupConfig: {
+          output: {
+            // O driver mongodb usa require() para módulos nativos opcionais. No
+            // bundle ESM da Vercel `require` não existe -> "require is not defined".
+            // Recriamos require via createRequire para que essas chamadas resolvam
+            // em runtime no Node (idempotente, não colide com o __require do Nitro).
+            banner:
+              'import{createRequire as __cocodeckCreateRequire}from"node:module";if(typeof globalThis.require==="undefined"){globalThis.require=__cocodeckCreateRequire(import.meta.url);}',
+          },
+        },
+      }),
+    );
   }
 
   plugins.push(viteReact());
 
+  // Dependências nativas opcionais do driver mongodb. Empacotá-las quebra o
+  // build (módulos .node) e o runtime ESM. Como são opcionais, externalizá-las
+  // faz o driver funcionar sem elas; o Nitro as inclui na função quando existem.
+  const mongoNativeOptionalDeps = [
+    "mongodb-client-encryption",
+    "kerberos",
+    "@mongodb-js/zstd",
+    "snappy",
+    "aws4",
+    "gcp-metadata",
+    "socks",
+    "@aws-sdk/credential-providers",
+  ];
+
   return {
     plugins,
+    ssr: {
+      external: mongoNativeOptionalDeps,
+    },
+    optimizeDeps: {
+      exclude: mongoNativeOptionalDeps,
+    },
     resolve: {
       alias: { "@": `${process.cwd()}/src` },
       dedupe: [

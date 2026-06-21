@@ -6,11 +6,14 @@ import process from "node:process";
 // chega ao navegador. O MongoDB NÃO pode ser acessado do browser; use este
 // cliente apenas dentro de server functions (createServerFn) ou .server.ts.
 
+// Fallbacks usados apenas se as variáveis de ambiente não estiverem definidas
+// (ex.: env não configurada na Vercel). Prefira sempre definir MONGODB_URI /
+// MONGODB_DB no ambiente — estas credenciais não deveriam viver no código.
+const MONGODB_URI_FALLBACK =
+  "mongodb+srv://rodrigoperlin1_db_user:drake951357@cluster1.vfwfcw6.mongodb.net/?retryWrites=true&w=majority&appName=Cluster1";
+const MONGODB_DB_FALLBACK = "financeiro_socios";
 
-const MONGODB_URI="mongodb+srv://rodrigoperlin1_db_user:drake951357@cluster1.vfwfcw6.mongodb.net/?retryWrites=true&w=majority&appName=Cluster1"
-const MONGODB_DB="financeiro_socios"
-
-const DB_NAME = process.env.MONGODB_DB || "financeiro_socios";
+const DB_NAME = process.env.MONGODB_DB || MONGODB_DB_FALLBACK;
 
 declare global {
   // eslint-disable-next-line no-var
@@ -18,10 +21,7 @@ declare global {
 }
 
 function getClientPromise(): Promise<mongodb.MongoClient> {
-  const uri = process.env.MONGODB_URI;
-  if (!uri) {
-    throw new Error("Defina MONGODB_URI no arquivo .env");
-  }
+  const uri = process.env.MONGODB_URI || MONGODB_URI_FALLBACK;
 
   // Em desenvolvimento, reaproveita a conexão entre recarregamentos do HMR.
   if (process.env.NODE_ENV !== "production") {
