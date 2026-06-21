@@ -15,6 +15,15 @@ const MONGODB_DB_FALLBACK = "financeiro_socios";
 
 const DB_NAME = process.env.MONGODB_DB || MONGODB_DB_FALLBACK;
 
+// Em ambientes serverless (Vercel/Lambda) o "Happy Eyeballs" do Node (auto
+// seleção IPv4/IPv6, padrão a partir do Node 18) pode quebrar o handshake TLS
+// com o Atlas, gerando "tlsv1 alert internal error / SSL alert number 80".
+// Forçar IPv4 (autoSelectFamily: false + family: 4) evita esse problema.
+const CLIENT_OPTIONS: mongodb.MongoClientOptions = {
+  autoSelectFamily: false,
+  family: 4,
+};
+
 declare global {
   // eslint-disable-next-line no-var
   var _mongoClientPromise: Promise<mongodb.MongoClient> | undefined;
@@ -26,14 +35,14 @@ function getClientPromise(): Promise<mongodb.MongoClient> {
   // Em desenvolvimento, reaproveita a conexão entre recarregamentos do HMR.
   if (process.env.NODE_ENV !== "production") {
     if (!global._mongoClientPromise) {
-      const client = new mongodb.MongoClient(uri);
+      const client = new mongodb.MongoClient(uri, CLIENT_OPTIONS);
       global._mongoClientPromise = client.connect();
     }
     return global._mongoClientPromise;
   }
 
   // Em produção, cria uma conexão dedicada.
-  const client = new mongodb.MongoClient(uri);
+  const client = new mongodb.MongoClient(uri, CLIENT_OPTIONS);
   return client.connect();
 }
 
